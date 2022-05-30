@@ -6,14 +6,14 @@ Usage:
     $ python path/to/models/yolo.py --cfg yolov5s.yaml
 """
 
-import argparse
+import argparse  # 解析命令行参数模块
 import os
 import platform
-import sys
-from copy import deepcopy
-from pathlib import Path
+import sys  # sys系统模块，包含了与python解释器和它的环境有关的函数
+from copy import deepcopy  # 数据拷贝模块，深拷贝
+from pathlib import Path  # path将str转换为path对象，使字符串路径易于操作的模块
 
-FILE = Path(__file__).resolve()
+FILE = Path(__file__).resolve()  # 将该项目文件路径加入系统的环境变量
 ROOT = FILE.parents[1]  # YOLOv5 root directory
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))  # add ROOT to PATH
@@ -250,20 +250,43 @@ class Model(nn.Module):
 
 
 def parse_model(d, ch):  # model_dict, input_channels(3)
+    """
+    - 用在上面Model模块中
+    - 解析模型文件（字典形式），并搭建网络结构
+    - 这个函数其实主要做的就是：更新当前层的args（参数），计算c2（当前层的输出channel） =>
+                           使用当前层的参数搭建当前层 =>
+                           生成layers + save
+    :param d:model_dict，模型文件，字典形式{dict:7},yolov5s.yaml中的6个元素 + ch
+    :param ch:记录模型每一层的输出channel，初始ch=[3]，后面会删除
+    :return nn.Sequential(*layers)：网络的每一层结构
+    :return sorted(save)：把所有层结构中from不是-1的值记下，并排序[4,6,10,14,17,20,23]
+    """
     LOGGER.info(f"\n{'':>3}{'from':>18}{'n':>3}{'params':>10}  {'module':<40}{'arguments':<30}")
-    anchors, nc, gd, gw = d['anchors'], d['nc'], d['depth_multiple'], d['width_multiple']
-    na = (len(anchors[0]) // 2) if isinstance(anchors, list) else anchors  # number of anchors
-    no = na * (nc + 5)  # number of outputs = anchors * (classes + 5)
 
+    # 读取d字典中的anchors和parameters(nc、 depth_multiple、width_multiple)
+    anchors, nc, gd, gw = d['anchors'], d['nc'], d['depth_multiple'], d['width_multiple']
+    # na:number of anchors，每一个predict head上的anchors数=3
+    na = (len(anchors[0]) // 2) if isinstance(anchors, list) else anchors  # number of anchors
+    # no:number of outputs，每一个predict head层的输出channel = anchors * (classes + 5) = 75(voc)
+    no = na * (nc + 5)  # number of outputs = anchors * (classes + 5)
+    # 开始搭建网络
+    # layers:保存每一层的层结构
+    # save：记录下所有层结构中from中不是-1的层结构序号
+    # c2:保存当前层的输出channel
     layers, save, c2 = [], [], ch[-1]  # layers, savelist, ch out
-    for i, (f, n, m, args) in enumerate(d['backbone'] + d['head']):  # from, number, module, args
+    # from(当前层输入来自那些层)，number(当前层次数 初定)，module(当前层类别)，args(当前层类参数（初定）)
+    for i, (f, n, m, args) in enumerate(d['backbone'] + d['head']):  # from, number, module, args，遍历backbone和head的每一层
+        # eval(string)，得到当前层的真实类名，例如：m= Focus -> <class 'models.common.Focus'>
         m = eval(m) if isinstance(m, str) else m  # eval strings
+        # 没什么用
         for j, a in enumerate(args):
             try:
                 args[j] = eval(a) if isinstance(a, str) else a  # eval strings
             except NameError:
                 pass
 
+        # -------------------更新当前层的args(参数)，计算c2(当前层的输出channel)-------------
+        # depth gain，控制深度，如v5s: n*0.33  n:当前模块的次数（间接控制深度）
         n = n_ = max(round(n * gd), 1) if n > 1 else n  # depth gain
         if m in (Conv, GhostConv, Bottleneck, GhostBottleneck, SPP, SPPF, DWConv, MixConv2d, Focus, CrossConv,
                  BottleneckCSP, C3, C3TR, C3SPP, C3Ghost):
