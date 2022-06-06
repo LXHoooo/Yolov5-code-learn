@@ -259,7 +259,7 @@ class LoadImages:
 
 class LoadWebcam:  # for inference
     # YOLOv5 local webcam dataloader, i.e. `python detect.py --source 0`
-    def __init__(self, pipe='0', img_size=640, stride=32):
+    def __init__(self, pipe='0', img_size=[480, 640], stride=32):  # height:480; weight:640
         self.img_size = img_size
         self.stride = stride
         self.pipe = eval(pipe) if pipe.isnumeric() else pipe
@@ -330,7 +330,7 @@ def gstreamer_pipeline(
 
 class LoadStreams:
     # YOLOv5 streamloader, i.e. `python detect.py --source 'rtsp://example.com/media.mp4'  # RTSP, RTMP, HTTP streams`
-    def __init__(self, sources='streams.txt', img_size=640, stride=32, auto=True):
+    def __init__(self, sources='streams.txt', img_size=[480, 640], stride=32, auto=True):
         self.mode = 'stream'
         self.img_size = img_size
         self.stride = stride

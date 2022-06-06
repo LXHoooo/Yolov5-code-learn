@@ -24,28 +24,36 @@ from utils.metrics import fitness
 
 # Settings
 RANK = int(os.getenv('RANK', -1))
-matplotlib.rc('font', **{'size': 11})
+matplotlib.rc('font', **{'size': 11})  # 自定义matplotlib图上字体font大小size=11
+# 在pycharm页面中控制绘图显示与否
 matplotlib.use('Agg')  # for writing to files only
 
 
+# 选择画线框的颜色，字体颜色等
 class Colors:
     # Ultralytics color palette https://ultralytics.com/
     def __init__(self):
         # hex = matplotlib.colors.TABLEAU_COLORS.values()
         hex = ('FF3838', 'FF9D97', 'FF701F', 'FFB21D', 'CFD231', '48F90A', '92CC17', '3DDB86', '1A9334', '00D4BB',
                '2C99A8', '00C2FF', '344593', '6473FF', '0018EC', '8438FF', '520085', 'CB38FF', 'FF95C8', 'FF37C7')
+        # 将hex列表中所有hex格式（十六进制）的颜色转换rgb格式的颜色
         self.palette = [self.hex2rgb('#' + c) for c in hex]
+        # 颜色个数
         self.n = len(self.palette)
 
     def __call__(self, i, bgr=False):
+        # 根据输入的index，选择相应的rgb颜色
         c = self.palette[int(i) % self.n]
+        # 返回选择的颜色，默认是rgb
         return (c[2], c[1], c[0]) if bgr else c
 
     @staticmethod
     def hex2rgb(h):  # rgb order (PIL)
+        # hex->rgb
         return tuple(int(h[1 + i:1 + i + 2], 16) for i in (0, 2, 4))
 
 
+# 初始化colors对象，下面调用colors的时候会调用__call__函数
 colors = Colors()  # create instance for 'from utils.plots import colors'
 
 
@@ -82,7 +90,7 @@ class Annotator:
             self.im = im
         self.lw = line_width or max(round(sum(im.shape) / 2 * 0.003), 2)  # line width
 
-    def box_label(self, box, label='', color=(128, 128, 128), txt_color=(255, 255, 255)):
+    def box_label(self, box, label='', lab='', color=(128, 128, 128), txt_color=(255, 255, 255)):
         # Add one xyxy box to image with label
         if self.pil or not is_ascii(label):
             self.draw.rectangle(box, width=self.lw, outline=color)  # box
@@ -97,7 +105,10 @@ class Annotator:
                 # self.draw.text((box[0], box[1]), label, fill=txt_color, font=self.font, anchor='ls')  # for PIL>8.0
                 self.draw.text((box[0], box[1] - h if outside else box[1]), label, fill=txt_color, font=self.font)
         else:  # cv2
+            # 输出box的坐标
             p1, p2 = (int(box[0]), int(box[1])), (int(box[2]), int(box[3]))
+            print(lab + ":" + "左上点的坐标为：(" + str(p1[0]) + "," + str(p1[1]) + ")，右下点的坐标为(" + str(p2[0]) + "," + str(p2[1]) + ")")
+
             cv2.rectangle(self.im, p1, p2, color, thickness=self.lw, lineType=cv2.LINE_AA)
             if label:
                 tf = max(self.lw - 1, 1)  # font thickness
@@ -186,12 +197,26 @@ def output_to_target(output):
     return np.array(targets)
 
 
+# 这个函数是用来绘制一个batch的所有图片的框框（真实框或预测框），使用在test.py中
 def plot_images(images, targets, paths=None, fname='images.jpg', names=None, max_size=1920, max_subplots=16):
     # Plot image grid with labels
+    """
+    用在test.py中进行绘制前三个batch的ground truth和预测框predictions（两个图）一起保存，或者train.py中
+    将整个batch的labels都画在这个batch的images上
+    :param images:当前batch的所有图片 ，Tensor [batch_size,3,h,w],且图片都是归一化后的
+    :param targets:
+    :param paths:当前batch中所有图片的地址
+    :param fname:最终保存的文件路径
+    :param names:传入的类名
+    :param max_size:图片的最大尺寸640
+    :param max_subplots:最大子图个数
+    :return:
+    """
     if isinstance(images, torch.Tensor):
         images = images.cpu().float().numpy()
     if isinstance(targets, torch.Tensor):
         targets = targets.cpu().numpy()
+    # 反归一化，将归一化后的图片还原
     if np.max(images[0]) <= 1:
         images *= 255  # de-normalise (optional)
     bs, _, h, w = images.shape  # batch size, _, height, width
@@ -247,20 +272,32 @@ def plot_images(images, targets, paths=None, fname='images.jpg', names=None, max
     annotator.im.save(fname)  # save
 
 
+# 这个用来画出训练过程中每个epoch的学习率变化情况
 def plot_lr_scheduler(optimizer, scheduler, epochs=300, save_dir=''):
     # Plot LR simulating training for full epochs
+    """
+    用在train.py中学习率设置后可视化一下
+    :param optimizer:优化器
+    :param scheduler:策略调整器
+    :param epochs:x
+    :param save_dir:保存地址
+    :return:
+    """
     optimizer, scheduler = copy(optimizer), copy(scheduler)  # do not modify originals
-    y = []
+    y = []  # 存放每个epoch的学习率
+
+    # 从optimizer中取学习率，一个epoch取一个，共取epochs个，每取一次需要使用scheduler.step更新下一个epoch的学习率
     for _ in range(epochs):
-        scheduler.step()
+        scheduler.step()  # 更新下一个epoch的学习率
+        # ptimizer.param_groups[0]['lr']: 取下一个epoch的学习率lr
         y.append(optimizer.param_groups[0]['lr'])
-    plt.plot(y, '.-', label='LR')
+    plt.plot(y, '.-', label='LR')  # 没有传入x 默认会传入 0..epochs-1
     plt.xlabel('epoch')
     plt.ylabel('LR')
     plt.grid()
     plt.xlim(0, epochs)
     plt.ylim(0)
-    plt.savefig(Path(save_dir) / 'LR.png', dpi=200)
+    plt.savefig(Path(save_dir) / 'LR.png', dpi=200)  # 保存
     plt.close()
 
 

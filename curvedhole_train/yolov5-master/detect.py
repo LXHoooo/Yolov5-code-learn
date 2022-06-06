@@ -52,15 +52,15 @@ def run(
         weights=ROOT / 'best.pt',  # model.pt path(s)
         source=ROOT / '0',  # file/dir/URL/glob, 0 for webcam
         data=ROOT / 'data/curved.yaml',  # dataset.yaml path
-        imgsz=(640, 640),  # inference size (height, width)
-        conf_thres=0.5,  # confidence threshold
+        imgsz=(480, 640),  # inference size (height, width)
+        conf_thres=0.54,  # confidence threshold
         iou_thres=0.3,  # NMS IOU threshold
         max_det=1000,  # maximum detections per image
         device='',  # cuda device, i.e. 0 or 0,1,2,3 or cpu
         view_img=False,  # show results
         save_txt=False,  # save results to *.txt
         save_conf=False,  # save confidences in --save-txt labels
-        save_crop=False,  # save cropped prediction boxes
+        save_crop=True,  # save cropped prediction boxes
         nosave=False,  # do not save images/videos
         classes=None,  # filter by class: --class 0, or --class 0 2 3
         agnostic_nms=False,  # class-agnostic NMS
@@ -172,6 +172,7 @@ def run(
 
                 # Write results
                 # 保存预测信息：txt、img0上画框、crop_img
+                count = 1  # 对检测到的box计数
                 for *xyxy, conf, cls in reversed(det):
                     if save_txt:  # Write to file
                         # 将xyxy（左上角+右下角）格式转换为xywh（中心+宽高）格式，并除以gn（whwh）做归一化，转为list再保存
@@ -182,8 +183,10 @@ def run(
                     # 在原图上画框+将预测到的目标剪切出来，保存图片
                     if save_img or save_crop or view_img:  # Add bbox to image
                         c = int(cls)  # integer class
-                        label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f}')
-                        annotator.box_label(xyxy, label, color=colors(c, True))
+                        label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f} {str(count)}')
+                        lab= str(count)
+                        annotator.box_label(xyxy, label, lab, color=colors(c, True))
+                        count += 1
                         if save_crop:
                             # 如果需要就将预测到的目标剪切出来
                             save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
@@ -253,11 +256,11 @@ def parse_opt():
     half: 是否使用半精度 Float16 推理 可以缩短推理时间 但是默认是False
     '''
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', nargs='+', type=str, default=ROOT / 'best.pt', help='model path(s)')
+    parser.add_argument('--weights', nargs='+', type=str, default=ROOT / 'best4.pt', help='model path(s)')
     parser.add_argument('--source', type=str, default=ROOT / '0', help='file/dir/URL/glob, 0 for webcam')
     parser.add_argument('--data', type=str, default=ROOT / 'data/curved.yaml', help='(optional) dataset.yaml path')
-    parser.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int, default=[640], help='inference size h,w')
-    parser.add_argument('--conf-thres', type=float, default=0.5, help='confidence threshold')
+    parser.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int, default=[480, 640], help='inference size h,w')
+    parser.add_argument('--conf-thres', type=float, default=0.54, help='confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.3, help='NMS IoU threshold')
     parser.add_argument('--max-det', type=int, default=1000, help='maximum detections per image')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
@@ -274,7 +277,7 @@ def parse_opt():
     parser.add_argument('--project', default=ROOT / 'runs/detect', help='save results to project/name')
     parser.add_argument('--name', default='exp', help='save results to project/name')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
-    parser.add_argument('--line-thickness', default=3, type=int, help='bounding box thickness (pixels)')
+    parser.add_argument('--line-thickness', default=2, type=int, help='bounding box thickness (pixels)')
     parser.add_argument('--hide-labels', default=False, action='store_true', help='hide labels')
     parser.add_argument('--hide-conf', default=False, action='store_true', help='hide confidences')
     parser.add_argument('--half', action='store_true', help='use FP16 half-precision inference')

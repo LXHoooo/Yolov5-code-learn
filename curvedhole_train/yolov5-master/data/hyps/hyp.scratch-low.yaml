@@ -35,3 +35,4 @@ fliplr: 0.5  # image flip left-right (probability)
 mosaic: 1.0  # image mosaic (probability)
 mixup: 0.2  # image mixup (probability)
 copy_paste: 0.0  # segment copy-paste (probability)
+# 更改了一些数据增强的数据，导致训练的时候检测成了其他的东西
