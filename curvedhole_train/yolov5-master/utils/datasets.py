@@ -399,7 +399,7 @@ class LoadStreams:
         self.count += 1
         if not all(x.is_alive() for x in self.threads) or cv2.waitKey(1) == ord('q'):  # q to quit
             cv2.destroyAllWindows()
-            # self.cap.release()
+            self.cap.release()
             raise StopIteration
 
         # Letterbox

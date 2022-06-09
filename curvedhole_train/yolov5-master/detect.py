@@ -46,6 +46,7 @@ from utils.general import (LOGGER, check_file, check_img_size, check_imshow, che
 from utils.plots import Annotator, colors, save_one_box
 from utils.torch_utils import select_device, time_sync
 
+
 # 前向推理，不需要计算梯度
 @torch.no_grad()
 def run(
@@ -184,7 +185,7 @@ def run(
                     if save_img or save_crop or view_img:  # Add bbox to image
                         c = int(cls)  # integer class
                         label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f} {str(count)}')
-                        lab= str(count)
+                        lab = str(count)
                         annotator.box_label(xyxy, label, lab, color=colors(c, True))
                         count += 1
                         if save_crop:
