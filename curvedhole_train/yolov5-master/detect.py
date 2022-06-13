@@ -50,7 +50,7 @@ from utils.torch_utils import select_device, time_sync
 # 前向推理，不需要计算梯度
 @torch.no_grad()
 def run(
-        weights=ROOT / 'best.pt',  # model.pt path(s)
+        weights=ROOT / 'best4.pt',  # model.pt path(s)
         source=ROOT / '0',  # file/dir/URL/glob, 0 for webcam
         data=ROOT / 'data/curved.yaml',  # dataset.yaml path
         imgsz=(480, 640),  # inference size (height, width)
@@ -78,17 +78,20 @@ def run(
         dnn=False,  # use OpenCV DNN for ONNX inference
 ):
     source = str(source)
-    # 是否保存预测后的图片
+    # 是否保存预测后的图片 source.endswith('.txt')检测source是不是.txt结尾的文件
     save_img = not nosave and not source.endswith('.txt')  # save inference images
+    # 取source的后缀名，并且从第一个元素开始取，相当于去掉.，并判断是不是这些里面的后缀名
     is_file = Path(source).suffix[1:] in (IMG_FORMATS + VID_FORMATS)
+    # 判断是否是url文件
     is_url = source.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://'))
     # 是否使用webcame网页数据，一般是False
     webcam = source.isnumeric() or source.endswith('.txt') or (is_url and not is_file)
+    # 使用摄像头不进入这语句
     if is_url and is_file:
         source = check_file(source)  # download
 
     # Directories
-    # 检查当前path（project）/name是否存在，如果存在就新建save_dir
+    # 检查当前path（project）/name是否存在，如果存在就新建save_dir，自增目录
     save_dir = increment_path(Path(project) / name, exist_ok=exist_ok)  # increment run
     # 默认save_txt，所以这里一般都是新建一个save_dir
     (save_dir / 'labels' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
@@ -96,6 +99,7 @@ def run(
     # Load model
     # 获取当前主机可用的设备
     device = select_device(device)
+    # 这句是重点，涉及到了权重导入，模型构建等等
     model = DetectMultiBackend(weights, device=device, dnn=dnn, data=data, fp16=half)
     stride, names, pt = model.stride, model.names, model.pt
     imgsz = check_img_size(imgsz, s=stride)  # check image size
@@ -236,7 +240,7 @@ def run(
 def parse_opt():
     '''
     weights:模型的权重地址
-    source:测试数据文件的保存路径
+    source:测试数据的源
     imgsz:网络输入图片的大小，默认640
     conf-thres:object置信度阈值，默认0.25
     iou-thres:做nms的iou阈值，默认0.45
@@ -293,7 +297,7 @@ def main(opt):
     #  检查已经安装的包是否满足requirements对应txt文件的参数
     check_requirements(exclude=('tensorboard', 'thop'))
     #  执行run，开始推理
-    run(**vars(opt))
+    run(**vars(opt))  # vars()操作的是对象，*:表示接收的参数作为元组来处理；**：表示接收的参数作为字典来处理
 
 
 if __name__ == "__main__":

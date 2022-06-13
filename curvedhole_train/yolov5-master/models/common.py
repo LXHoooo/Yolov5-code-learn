@@ -294,16 +294,22 @@ class DetectMultiBackend(nn.Module):
         from models.experimental import attempt_download, attempt_load  # scoped to avoid circular import
 
         super().__init__()
+        # 得到w是best4.pt
         w = str(weights[0] if isinstance(weights, list) else weights)
+        # 判断w的类型是pt文件
         pt, jit, onnx, xml, engine, coreml, saved_model, pb, tflite, edgetpu, tfjs = self.model_type(w)  # get backend
+        # stride=32,names=['class0'-'class999']
         stride, names = 32, [f'class{i}' for i in range(1000)]  # assign defaults
         w = attempt_download(w)  # download if not local
+        # fp16=0
         fp16 &= (pt or jit or onnx or engine) and device.type != 'cpu'  # FP16
         if data:  # data.yaml path (optional)
             with open(data, errors='ignore') as f:
+                # names=['curved']
                 names = yaml.safe_load(f)['names']  # class names
 
         if pt:  # PyTorch
+            # 这句是重点，整个模型的构建
             model = attempt_load(weights if isinstance(weights, list) else w, map_location=device)
             stride = max(int(model.stride.max()), 32)  # model stride
             names = model.module.names if hasattr(model, 'module') else model.names  # get class names

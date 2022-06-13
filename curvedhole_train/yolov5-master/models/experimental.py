@@ -73,7 +73,7 @@ class MixConv2d(nn.Module):
 
 
 class Ensemble(nn.ModuleList):
-    # Ensemble of models
+    # Ensemble of models，模型集成，减少模型的泛化误差
     def __init__(self):
         super().__init__()
 
